@@ -10,6 +10,14 @@
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <linux/net_tstamp.h>
+
+enum TimestampType
+{
+	TT_NONE,
+	TT_TIMESTAMP,
+	TT_TIMESTAMPING
+};
 
 struct ScriptNode *nodes = NULL;
 int nodes_num = 0;
@@ -21,7 +29,7 @@ static void node_destroy(struct ScriptNode *node);
 
 static int node_onenable(struct ScriptNode *node);
 static int node_ondisable(struct ScriptNode *node);
-static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu);
+static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp);
 
 int main(int argc, char *argv[])
 {
@@ -69,6 +77,28 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	int timestamping_flags = SOF_TIMESTAMPING_SOFTWARE |
+		SOF_TIMESTAMPING_RX_SOFTWARE |
+		SOF_TIMESTAMPING_RX_HARDWARE |
+		SOF_TIMESTAMPING_RAW_HARDWARE;
+	int timestamp_on = 1;
+	enum TimestampType timestamp_type = TT_TIMESTAMPING;
+
+	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPING,
+		&timestamping_flags, sizeof(timestamping_flags)) < 0)
+	{
+		printf("warning: SO_TIMESTAMPING not supported\n");
+		timestamp_type = TT_TIMESTAMP;
+	}
+	else if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMP,
+		&timestamp_on, sizeof(timestamp_on)) < 0)
+	{
+		printf("warning: SO_TIMESTAMP not supported\n");
+		timestamp_type = TT_NONE;
+	}
+
+	// to do - count dropped frames (SO_RXQ_OVFL)
+
 	// load node configuration
 	int nodenum = config_get_node_num();
 	nodes_init(nodenum);
@@ -98,15 +128,57 @@ int main(int argc, char *argv[])
 			if (fds.revents & POLLIN)
 			{
 				// there is data to read
+				struct msghdr msg;
+				struct iovec iov;
+				char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) +
+					CMSG_SPACE(3 * sizeof(struct timespec))];
 				struct canfd_frame frame;
-				int nbytes = read(fds.fd, &frame, CANFD_MTU);
+
+				memset(&msg, 0, sizeof(msg));
+				iov.iov_base = &frame;
+				iov.iov_len = sizeof(frame);
+				msg.msg_iov = &iov;
+				msg.msg_iovlen = 1;
+				msg.msg_control = ctrlmsg;
+				msg.msg_controllen = sizeof(ctrlmsg);
+
+				int nbytes = recvmsg(fds.fd, &msg, 0);
 				if (nbytes < 0)
 					return RC_SOCKETREAD;
+
+				unsigned long long int timestamp = 0;
+				if (msg.msg_control && msg.msg_controllen)
+				{
+					for (struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+						cmsg && (cmsg->cmsg_level == SOL_SOCKET);
+						cmsg = CMSG_NXTHDR(&msg,cmsg))
+					{
+						if (timestamp_type == TT_TIMESTAMP && cmsg->cmsg_type == SO_TIMESTAMP)
+						{
+							struct timeval *tv = (struct timeval *)CMSG_DATA(cmsg);
+							timestamp = tv->tv_usec * 1000 + tv->tv_sec * 1000000000;
+						} else if (timestamp_type == TT_TIMESTAMPING && cmsg->cmsg_type == SO_TIMESTAMPING)
+						{
+							struct timespec *stamp = (struct timespec *)CMSG_DATA(cmsg);
+							/*
+							 * stamp[0] is the software timestamp
+							 * stamp[1] is deprecated
+							 * stamp[2] is the raw hardware timestamp
+							 * See chapter 2.1.2 Receive timestamps in
+							 * linux/Documentation/networking/timestamping.txt
+							 */
+							if (stamp[2].tv_nsec || stamp[2].tv_sec)
+								stamp += 2;		// read timestamp from stamp[2]
+							timestamp = stamp->tv_nsec + stamp->tv_sec * 1000000000;
+						}
+					}
+				}
+
 				// on_message callback
 				for (int i = 0; i < nodenum; ++i)
 				{
 					if (nodes[i].enabled)
-						node_onmessage(&nodes[i], &frame, nbytes);
+						node_onmessage(&nodes[i], &frame, nbytes, timestamp);
 				}
 			}
 			else
@@ -202,7 +274,7 @@ int node_ondisable(struct ScriptNode *node)
 	return RC_OK;
 }
 
-int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu)
+int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp)
 {
 	int err = 0;
 	int rettype = lua_getglobal(node->lua, "on_message");
@@ -223,6 +295,10 @@ int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu)
 		// mtu - (16 - CAN, 72 - CAN FD)
 		lua_pushstring(node->lua, "mtu");
 		lua_pushinteger(node->lua, mtu);
+		lua_settable(node->lua, -3);
+		// timestamp in nanoseconds
+		lua_pushstring(node->lua, "timestamp");
+		lua_pushinteger(node->lua, timestamp);
 		lua_settable(node->lua, -3);
 		// frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
 		unsigned int eff = frame->can_id & CAN_EFF_FLAG;
