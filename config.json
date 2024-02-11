@@ -1,0 +1,14 @@
+{
+	"nodes": [
+		{
+			"name": "logger",
+			"path": "scripts/logger.lua",
+			"enabled": true
+		},
+		{
+			"name": "logger_duplicate",
+			"path": "scripts/logger.lua",
+			"enabled": false
+		}
+	]
+}

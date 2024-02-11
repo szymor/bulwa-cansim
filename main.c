@@ -1,15 +1,8 @@
-#include <stdbool.h>
-
-#include <stdio.h>
-#include <string.h>
+#include "global.h"
 
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
-
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -18,30 +11,11 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define MAX_NAME_LEN		(32)
+struct ScriptNode *nodes = NULL;
 
-enum ReturnCode
-{
-	RC_OK,
-	RC_LOADFILE,
-	RC_CALL,
-	RC_INIT,
-	RC_SOCKET,
-	RC_BIND,
-	RC_SOCKETREAD,
-	RC_END
-};
+void nodes_init(int num);
+void nodes_deinit(void);
 
-struct ScriptNode
-{
-	char name[MAX_NAME_LEN];
-	lua_State *lua;
-	bool enabled;
-};
-
-struct ScriptNode node;
-
-int node_init(struct ScriptNode *node, const char *name, const char *spath);
 void node_destroy(struct ScriptNode *node);
 void node_enable(struct ScriptNode *node);
 void node_disable(struct ScriptNode *node);
@@ -53,6 +27,13 @@ int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu);
 int main(int argc, char *argv[])
 {
 	printf("Bulwa CAN Simulator\n");
+
+	// parse JSON configuration file
+	if (RC_OK != config_load("config.json"))
+	{
+		fprintf(stderr, "no valid json configuration found\n");
+		return RC_CONFIGFILE;
+	}
 
 	// CAN socket setup
 	int s;
@@ -76,7 +57,7 @@ int main(int argc, char *argv[])
 	{
 		if (ENOPROTOOPT == errno)
 		{
-			printf("warning: CANFD not supported\n");
+			printf("warning: CAN FD not supported\n");
 		}
 		else
 		{
@@ -84,11 +65,23 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	int err = node_init(&node, "logger", "logger.lua");
-	if (err)
-		return RC_INIT;
+	// load node configuration
+	int nodenum = config_get_node_num();
+	nodes_init(nodenum);
+	int err = RC_OK;
+	for (int i = 0; i < nodenum; ++i)
+	{
+		err = config_load_node(i, &nodes[i]);
+		if (err != RC_OK)
+			return RC_INIT;
+	}
 
-	node_enable(&node);
+	// enable nodes
+	for (int i = 0; i < nodenum; ++i)
+	{
+		if (nodes[i].enabled)
+			node_enable(&nodes[i]);
+	}
 
 	struct pollfd fds;
 	fds.fd = s;
@@ -105,7 +98,12 @@ int main(int argc, char *argv[])
 				int nbytes = read(fds.fd, &frame, CANFD_MTU);
 				if (nbytes < 0)
 					return RC_SOCKETREAD;
-				node_onmessage(&node, &frame, nbytes);
+				// on_message callback
+				for (int i = 0; i < nodenum; ++i)
+				{
+					if (nodes[i].enabled)
+						node_onmessage(&nodes[i], &frame, nbytes);
+				}
 			}
 			else
 			{
@@ -118,34 +116,26 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	config_unload();
 	close(s);
-	node_destroy(&node);
+
+	for (int i = 0; i < nodenum; ++i)
+	{
+		node_destroy(&nodes[i]);
+	}
 
 	return 0;
 }
 
-int node_init(struct ScriptNode *node, const char *name, const char *spath)
+void nodes_init(int num)
 {
-	int err = 0;
+	nodes = (struct ScriptNode *)malloc(num * sizeof(struct ScriptNode));
+}
 
-	strcpy(node->name, name);
-	node->enabled = false;
-
-	node->lua = luaL_newstate();
-	luaL_openlibs(node->lua);
-	err = luaL_loadfile(node->lua, spath);
-	if (err)
-	{
-		fprintf(stderr, "%s: loadfile error\n", node->name);
-		return RC_LOADFILE;
-	}
-	err = lua_pcall(node->lua, 0, 0, 0);
-	if (err)
-	{
-		fprintf(stderr, "%s: %s\n", node->name, lua_tostring(node->lua, -1));
-		return RC_CALL;
-	}
-	return RC_OK;
+void nodes_deinit(void)
+{
+	free(nodes);
+	nodes = NULL;
 }
 
 void node_destroy(struct ScriptNode *node)
