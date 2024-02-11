@@ -18,7 +18,6 @@
 #include <linux/can.h>
 #include <linux/can/raw.h>
 
-#define MAX_PATH_LEN		(32)
 #define MAX_NAME_LEN		(32)
 
 enum ReturnCode
@@ -214,7 +213,17 @@ int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu)
 	int rettype = lua_getglobal(node->lua, "on_message");
 	if (LUA_TFUNCTION == rettype)
 	{
-		unsigned int canfd_flags = (mtu == CANFD_MTU) ? frame->flags : 0;
+		int dlc = 0;
+		unsigned int canfd_flags = 0;
+		if (mtu == CANFD_MTU)
+		{
+			canfd_flags = frame->flags;
+		}
+		else if (mtu == CAN_MTU)
+		{
+			dlc = ((struct can_frame *)frame)->len8_dlc;
+		}
+
 		lua_newtable(node->lua);
 		// mtu - (16 - CAN, 72 - CAN FD)
 		lua_pushstring(node->lua, "mtu");
@@ -237,6 +246,11 @@ int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu)
 		// error message frame flag (0 = data frame, 1 = error message)
 		lua_pushstring(node->lua, "err");
 		lua_pushboolean(node->lua, frame->can_id & CAN_ERR_FLAG);
+		lua_settable(node->lua, -3);
+		// [CAN] optional DLC for 8 byte payload length (9..15)
+		// legacy field, do not use it to check the frame length
+		lua_pushstring(node->lua, "dlc");
+		lua_pushinteger(node->lua, dlc);
 		lua_settable(node->lua, -3);
 		// [CANFD] bit rate switch flag (second bitrate for payload data)
 		lua_pushstring(node->lua, "brs");
