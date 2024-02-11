@@ -42,5 +42,6 @@ int config_load(const char *path);
 int config_get_node_num(void);
 int config_load_node(int idx, struct ScriptNode *node);
 void config_unload(void);
+const char *config_get_canif_name(void);
 
 #endif

@@ -25,7 +25,10 @@ static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, in
 
 int main(int argc, char *argv[])
 {
-	printf("Bulwa CAN Simulator\n");
+	printf("Bulwa CAN Simulator " __DATE__ "\n"
+		"Copyright (C) 2024 Szymon Morawski\n"
+		"This is free software; see the source for copying conditions.  There is NO\n"
+		"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
 
 	// parse JSON configuration file
 	if (RC_OK != config_load("config.json"))
@@ -42,7 +45,9 @@ int main(int argc, char *argv[])
 	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 	if (s < 0)
 		return RC_SOCKET;
-	strcpy(ifr.ifr_name, "vcan0");
+	const char *canif_name = config_get_canif_name();
+	printf("interface %s found in config\n\n", canif_name);
+	strcpy(ifr.ifr_name, canif_name);
 	ioctl(s, SIOCGIFINDEX, &ifr);
 
 	memset(&addr, 0, sizeof(addr));

@@ -79,3 +79,14 @@ int config_load_node(int idx, struct ScriptNode *node)
 	}
 	return RC_OK;
 }
+
+const char *config_get_canif_name(void)
+{
+	cJSON *canif_item = cJSON_GetObjectItem(config, "canif");
+	if (!canif_item)
+		return NULL;
+	cJSON *name_item = cJSON_GetObjectItem(canif_item, "name");
+	if (!name_item)
+		return NULL;
+	return cJSON_GetStringValue(name_item);
+}
