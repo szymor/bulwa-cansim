@@ -30,6 +30,14 @@ struct ScriptNode
 	bool enabled;
 };
 
+extern struct ScriptNode *nodes;
+extern int nodes_num;
+
+void luaenv_add_custom_api(lua_State *lua, const char *node_name);
+
+void node_enable(struct ScriptNode *node);
+void node_disable(struct ScriptNode *node);
+
 int config_load(const char *path);
 int config_get_node_num(void);
 int config_load_node(int idx, struct ScriptNode *node);

@@ -12,17 +12,16 @@
 #include <linux/can/raw.h>
 
 struct ScriptNode *nodes = NULL;
+int nodes_num = 0;
 
-void nodes_init(int num);
-void nodes_deinit(void);
+static void nodes_init(int num);
+static void nodes_deinit(void);
 
-void node_destroy(struct ScriptNode *node);
-void node_enable(struct ScriptNode *node);
-void node_disable(struct ScriptNode *node);
+static void node_destroy(struct ScriptNode *node);
 
-int node_onenable(struct ScriptNode *node);
-int node_ondisable(struct ScriptNode *node);
-int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu);
+static int node_onenable(struct ScriptNode *node);
+static int node_ondisable(struct ScriptNode *node);
+static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu);
 
 int main(int argc, char *argv[])
 {
@@ -130,6 +129,7 @@ int main(int argc, char *argv[])
 void nodes_init(int num)
 {
 	nodes = (struct ScriptNode *)malloc(num * sizeof(struct ScriptNode));
+	nodes_num = num;
 }
 
 void nodes_deinit(void)

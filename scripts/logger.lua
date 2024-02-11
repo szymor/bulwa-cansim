@@ -1,5 +1,9 @@
 function on_enable()
-	print("I am Loggy the Logger!")
+	print(string.format("I am %s the Logger!", nodename))
+end
+
+function on_disable()
+	print(string.format("Oh no, I, the great %s, am dying a violent death!", nodename))
 end
 
 function on_message(msg)
