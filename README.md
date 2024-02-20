@@ -18,6 +18,16 @@ sudo ip link add dev vcan0 type vcan
 sudo ip link set up vcan0
 ```
 
+### configure hardware CAN device
+```
+# CAN
+sudo ip link set can0 type can bitrate 500000
+# CAN FD
+sudo ip link set can0 type can bitrate 500000 dbitrate 5000000 fd on
+
+sudo ip link set up can0
+```
+
 ### generate random messages
 ```
 # CAN

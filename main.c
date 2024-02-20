@@ -144,7 +144,10 @@ int main(int argc, char *argv[])
 
 				int nbytes = recvmsg(fds.fd, &msg, 0);
 				if (nbytes < 0)
+				{
+					fprintf(stderr, "recvmsg error\n");
 					return RC_SOCKETREAD;
+				}
 
 				unsigned long long int timestamp = 0;
 				if (msg.msg_control && msg.msg_controllen)
@@ -180,6 +183,11 @@ int main(int argc, char *argv[])
 					if (nodes[i].enabled)
 						node_onmessage(&nodes[i], &frame, nbytes, timestamp);
 				}
+			}
+			else if (fds.revents & POLLERR)
+			{
+				fprintf(stderr, "error reading from socket, have you forgot to set bitrate and set up %s?\n", canif_name);
+				return RC_SOCKETREAD;
 			}
 			else
 			{
