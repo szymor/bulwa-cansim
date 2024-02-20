@@ -5,14 +5,14 @@ static int luaenv_disablenode(lua_State *lua);
 
 void luaenv_add_custom_api(lua_State *lua, const char *node_name)
 {
-	lua_pushstring (lua, node_name);
-	lua_setglobal(lua, "nodename");
+	lua_pushstring(lua, node_name);
+	lua_setglobal(lua, "node_name");
 
 	lua_pushcfunction(lua, luaenv_enablenode);
-	lua_setglobal(lua, "enablenode");
+	lua_setglobal(lua, "enable_node");
 
 	lua_pushcfunction(lua, luaenv_disablenode);
-	lua_setglobal(lua, "disablenode");
+	lua_setglobal(lua, "disable_node");
 }
 
 static int luaenv_enablenode(lua_State *lua)

@@ -1,7 +1,8 @@
-last_timestamp = 0
+start_time = 0
 
 function on_enable()
 	print(string.format("start: %s", os.date()))
+	start_time = os.time()
 end
 
 function on_disable()
@@ -9,10 +10,7 @@ function on_disable()
 end
 
 function on_message(msg)
-	if last_timestamp == 0 then
-		last_timestamp = msg.timestamp
-	end
-	diff = (msg.timestamp - last_timestamp) / 1000000000
+	diff = msg.timestamp / 1000000000 - start_time
 
 	proto_string = (msg.mtu == 16) and "  CAN" or "CANFD"
 	extended_id = string.format("%08x%s", msg.id, msg.eff and "x" or " ")

@@ -6,6 +6,11 @@ BCS is a minimalistic CAN simulator that implements a virtual bus concept known 
 
 The work is in progress.
 
+## custom LUA API
+`node_name` - a string containing the name of a node running the script
+`enable_node(<node_name_string>)` - enables the node named *node_name_string*
+`disable_node(<node_name_string>)` - disables the node named *node_name_string*
+
 ## credits
 Code by *szymor* aka *vamastah*.
 

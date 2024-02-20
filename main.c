@@ -19,6 +19,9 @@ enum TimestampType
 	TT_TIMESTAMPING
 };
 
+// CAN socket
+int s;
+
 struct ScriptNode *nodes = NULL;
 int nodes_num = 0;
 
@@ -30,6 +33,8 @@ static void node_destroy(struct ScriptNode *node);
 static int node_onenable(struct ScriptNode *node);
 static int node_ondisable(struct ScriptNode *node);
 static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp);
+
+static void finalize(void);
 
 int main(int argc, char *argv[])
 {
@@ -46,7 +51,6 @@ int main(int argc, char *argv[])
 	}
 
 	// CAN socket setup
-	int s;
 	struct ifreq ifr;
 	struct sockaddr_can addr;
 
@@ -116,6 +120,8 @@ int main(int argc, char *argv[])
 		if (nodes[i].enabled)
 			node_enable(&nodes[i]);
 	}
+
+	atexit(finalize);
 
 	struct pollfd fds;
 	fds.fd = s;
@@ -200,15 +206,27 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	return 0;
+}
+
+static void finalize(void)
+{
+	/* needed to do as atexit callback as
+	 * a Lua script can exit the process as well
+	 */
 	config_unload();
 	close(s);
 
-	for (int i = 0; i < nodenum; ++i)
+	for (int i = 0; i < nodes_num; ++i)
+	{
+		if (nodes[i].enabled)
+			node_disable(&nodes[i]);
+	}
+
+	for (int i = 0; i < nodes_num; ++i)
 	{
 		node_destroy(&nodes[i]);
 	}
-
-	return 0;
 }
 
 void nodes_init(int num)
