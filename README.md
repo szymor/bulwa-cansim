@@ -11,6 +11,12 @@ The work is in progress.
 `enable_node(<node_name_string>)` - enables the node named *node_name_string*
 `disable_node(<node_name_string>)` - disables the node named *node_name_string*
 
+### callbacks
+`on_enable`
+`on_disable`
+`on_message(msg)` - *msg* contains details of the received message
+`on_timer(interval)` - returns non-zero value for a periodic timer
+
 ## credits
 Code by *szymor* aka *vamastah*.
 

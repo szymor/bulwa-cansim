@@ -28,6 +28,8 @@ struct ScriptNode
 	char *name;
 	lua_State *lua;
 	bool enabled;
+	lua_Integer timer_interval;
+	timer_t timerid;
 };
 
 extern struct ScriptNode *nodes;
@@ -37,6 +39,7 @@ void luaenv_add_custom_api(lua_State *lua, const char *node_name);
 
 void node_enable(struct ScriptNode *node);
 void node_disable(struct ScriptNode *node);
+void node_set_timer(struct ScriptNode *node, lua_Integer interval);
 
 int config_load(const char *path);
 int config_get_node_num(void);

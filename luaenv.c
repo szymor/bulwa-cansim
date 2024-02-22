@@ -2,6 +2,7 @@
 
 static int luaenv_enablenode(lua_State *lua);
 static int luaenv_disablenode(lua_State *lua);
+static int luaenv_settimer(lua_State *lua);
 
 void luaenv_add_custom_api(lua_State *lua, const char *node_name)
 {
@@ -44,5 +45,10 @@ static int luaenv_disablenode(lua_State *lua)
 			}
 		}
 	}
+	return 0;
+}
+
+static int luaenv_settimer(lua_State *lua)
+{
 	return 0;
 }

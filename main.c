@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <poll.h>
 #include <errno.h>
+#include <signal.h>
+#include <time.h>
 
 #include <net/if.h>
 #include <sys/ioctl.h>
@@ -32,7 +34,9 @@ static void node_destroy(struct ScriptNode *node);
 
 static int node_onenable(struct ScriptNode *node);
 static int node_ondisable(struct ScriptNode *node);
-static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp);
+static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame,
+	int mtu, unsigned long long int timestamp);
+static int node_ontimer(struct ScriptNode *node);
 
 static void finalize(void);
 
@@ -67,7 +71,10 @@ int main(int argc, char *argv[])
 	addr.can_ifindex = ifr.ifr_ifindex;
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+	{
+		fprintf(stderr, "cannot bind a socket to the interface\n");
 		return RC_BIND;
+	}
 	int enable_canfd = 1;
 	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd)) < 0)
 	{
@@ -126,10 +133,10 @@ int main(int argc, char *argv[])
 	struct pollfd fds;
 	fds.fd = s;
 	fds.events = POLLIN;
-
+	node_set_timer(&nodes[0], 1000);
 	while (1)
 	{
-		if (poll(&fds, 1, 100) > 0)
+		if (poll(&fds, 1, 50) > 0)
 		{
 			if (fds.revents & POLLIN)
 			{
@@ -204,6 +211,20 @@ int main(int argc, char *argv[])
 		{
 			// timeout
 		}
+
+		// on_timer callback
+		for (int i = 0; i < nodenum; ++i)
+		{
+			if (nodes[i].enabled && nodes[i].timer_interval)
+			{
+				struct itimerspec ts;
+				timer_gettime(nodes[i].timerid, &ts);
+				if (0 == ts.it_value.tv_sec && 0 == ts.it_value.tv_nsec)
+				{
+					node_ontimer(&nodes[i]);
+				}
+			}
+		}
 	}
 
 	return 0;
@@ -229,21 +250,27 @@ static void finalize(void)
 	}
 }
 
-void nodes_init(int num)
+static void nodes_init(int num)
 {
 	nodes = (struct ScriptNode *)malloc(num * sizeof(struct ScriptNode));
+	memset(nodes, 0, sizeof(struct ScriptNode));
 	nodes_num = num;
 }
 
-void nodes_deinit(void)
+static void nodes_deinit(void)
 {
 	free(nodes);
 	nodes = NULL;
 }
 
-void node_destroy(struct ScriptNode *node)
+static void node_destroy(struct ScriptNode *node)
 {
-	lua_close(node->lua);
+	if (node->lua)
+		lua_close(node->lua);
+	node->lua = NULL;
+	if (node->timer_interval)
+		timer_delete(node->timerid);
+	node->timer_interval = 0;
 }
 
 void node_enable(struct ScriptNode *node)
@@ -258,7 +285,44 @@ void node_disable(struct ScriptNode *node)
 	node_ondisable(node);
 }
 
-int node_onenable(struct ScriptNode *node)
+void node_set_timer(struct ScriptNode *node, lua_Integer interval)
+{
+	if (0 == node->timer_interval && interval)
+	{
+		struct sigevent sev;
+		memset(&sev, 0, sizeof(sev));
+		sev.sigev_notify = SIGEV_NONE;
+		int err = timer_create(CLOCK_MONOTONIC, &sev, &node->timerid);
+		if (0 == err)
+		{
+			node->timer_interval = interval;
+		}
+		else
+		{
+			fprintf(stderr, "timer NOT created\n");
+		}
+	}
+
+	if (node->timer_interval)
+	{
+		node->timer_interval = interval;
+
+		if (0 == interval)
+		{
+			timer_delete(node->timerid);
+		}
+		else
+		{
+			struct itimerspec ts;
+			memset(&ts, 0, sizeof(ts));
+			ts.it_value.tv_sec = interval / 1000;
+			ts.it_value.tv_nsec = (interval % 1000) * 1000000;
+			timer_settime(node->timerid, 0, &ts, NULL);
+		}
+	}
+}
+
+static int node_onenable(struct ScriptNode *node)
 {
 	int err = 0;
 	int rettype = lua_getglobal(node->lua, "on_enable");
@@ -279,7 +343,7 @@ int node_onenable(struct ScriptNode *node)
 	return RC_OK;
 }
 
-int node_ondisable(struct ScriptNode *node)
+static int node_ondisable(struct ScriptNode *node)
 {
 	int err = 0;
 	int rettype = lua_getglobal(node->lua, "on_disable");
@@ -300,7 +364,7 @@ int node_ondisable(struct ScriptNode *node)
 	return RC_OK;
 }
 
-int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp)
+static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, unsigned long long int timestamp)
 {
 	int err = 0;
 	int rettype = lua_getglobal(node->lua, "on_message");
@@ -379,6 +443,33 @@ int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, int mtu, 
 	else
 	{
 		printf("warning: no valid on_message function for node %s\n", node->name);
+		lua_pop(node->lua, 1);
+	}
+	return RC_OK;
+}
+
+static int node_ontimer(struct ScriptNode *node)
+{
+	int err = 0;
+	int rettype = lua_getglobal(node->lua, "on_timer");
+	if (LUA_TFUNCTION == rettype)
+	{
+		lua_pushinteger(node->lua, node->timer_interval);
+		err = lua_pcall(node->lua, 1, 1, 0);
+		if (err)
+		{
+			fprintf(stderr, "%s\n", lua_tostring(node->lua, -1));
+			return RC_CALL;
+		}
+		// Number supports fractions of milliseconds
+		lua_Number interval = lua_tonumber(node->lua, -1);
+		node_set_timer(node, (lua_Integer)interval);
+		lua_pop(node->lua, 1);
+	}
+	else
+	{
+		printf("warning: no valid on_timer function for node %s\n", node->name);
+		node_set_timer(node, 0);
 		lua_pop(node->lua, 1);
 	}
 	return RC_OK;
