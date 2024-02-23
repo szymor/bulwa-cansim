@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 	struct pollfd fds;
 	fds.fd = s;
 	fds.events = POLLIN;
-	node_set_timer(&nodes[0], 1000);
+
 	while (1)
 	{
 		if (poll(&fds, 1, 50) > 0)
@@ -462,8 +462,8 @@ static int node_ontimer(struct ScriptNode *node)
 			return RC_CALL;
 		}
 		// Number supports fractions of milliseconds
-		lua_Number interval = lua_tonumber(node->lua, -1);
-		node_set_timer(node, (lua_Integer)interval);
+		lua_Integer interval = (lua_Integer)lua_tonumber(node->lua, -1);
+		node_set_timer(node, interval);
 		lua_pop(node->lua, 1);
 	}
 	else

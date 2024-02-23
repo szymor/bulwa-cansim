@@ -8,11 +8,15 @@ The work is in progress.
 
 ## custom LUA API
 
+`node_id` - an integer denoting the index of a node running the script
+
 `node_name` - a string containing the name of a node running the script
 
 `enable_node(<node_name_string>)` - enables the node named *node_name_string*
 
 `disable_node(<node_name_string>)` - disables the node named *node_name_string*
+
+`set_timer(interval)` - arms the timer of a node with a given time *interval*; if *interval* == 0, then the timer is disarmed
 
 ### callbacks
 `on_enable`

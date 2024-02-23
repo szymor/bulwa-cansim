@@ -64,7 +64,7 @@ int config_load_node(int idx, struct ScriptNode *node)
 	int err = RC_OK;
 	node->lua = luaL_newstate();
 	luaL_openlibs(node->lua);
-	luaenv_add_custom_api(node->lua, node->name);
+	luaenv_add_custom_api(node->lua, idx);
 	err = luaL_loadfile(node->lua, script_path);
 	if (err)
 	{
