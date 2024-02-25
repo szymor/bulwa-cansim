@@ -7,6 +7,11 @@
 			"name": "logger",
 			"path": "scripts/logger.lua",
 			"enabled": true
+		},
+		{
+			"name": "virtual ecu",
+			"path": "scripts/virtual_ecu.lua",
+			"enabled": true
 		}
 	]
 }

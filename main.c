@@ -1,18 +1,9 @@
 #include "global.h"
 
-#include <unistd.h>
 #include <poll.h>
 #include <errno.h>
 #include <signal.h>
 #include <time.h>
-
-#include <net/if.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-
-#include <linux/can.h>
-#include <linux/can/raw.h>
-#include <linux/net_tstamp.h>
 
 enum TimestampType
 {
@@ -75,16 +66,29 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "cannot bind a socket to the interface\n");
 		return RC_BIND;
 	}
+
+	int recv_own_msgs = 1;
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &recv_own_msgs, sizeof(recv_own_msgs)))
+	{
+		fprintf(stderr, "warning: CAN_RAW_RECV_OWN_MSGS not supported\n");
+	}
+
+	can_err_mask_t err_mask = CAN_ERR_MASK;		// register for all error events
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask)))
+	{
+		fprintf(stderr, "warning: CAN_ERR_* not supported\n");
+	}
+
 	int enable_canfd = 1;
 	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &enable_canfd, sizeof(enable_canfd)) < 0)
 	{
 		if (ENOPROTOOPT == errno)
 		{
-			printf("warning: CAN FD not supported\n");
+			fprintf(stderr, "warning: CAN FD not supported\n");
 		}
 		else
 		{
-			printf("weird thing happened: errno == %0x\n", errno);
+			fprintf(stderr, "weird thing happened: errno == %0x\n", errno);
 		}
 	}
 
@@ -95,16 +99,15 @@ int main(int argc, char *argv[])
 	int timestamp_on = 1;
 	enum TimestampType timestamp_type = TT_TIMESTAMPING;
 
-	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPING,
-		&timestamping_flags, sizeof(timestamping_flags)) < 0)
+	if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPING, &timestamping_flags, sizeof(timestamping_flags)) < 0)
 	{
-		printf("warning: SO_TIMESTAMPING not supported\n");
+		fprintf(stderr, "warning: SO_TIMESTAMPING not supported\n");
 		timestamp_type = TT_TIMESTAMP;
 	}
 	else if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMP,
 		&timestamp_on, sizeof(timestamp_on)) < 0)
 	{
-		printf("warning: SO_TIMESTAMP not supported\n");
+		fprintf(stderr, "warning: SO_TIMESTAMP not supported\n");
 		timestamp_type = TT_NONE;
 	}
 
@@ -204,7 +207,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				printf("weird thing happened: revents == %0x\n", fds.revents);
+				fprintf(stderr, "weird thing happened: revents == %0x\n", fds.revents);
 			}
 		}
 		else
@@ -253,7 +256,7 @@ static void finalize(void)
 static void nodes_init(int num)
 {
 	nodes = (struct ScriptNode *)malloc(num * sizeof(struct ScriptNode));
-	memset(nodes, 0, sizeof(struct ScriptNode));
+	memset(nodes, 0, num * sizeof(struct ScriptNode));
 	nodes_num = num;
 }
 
@@ -317,7 +320,11 @@ void node_set_timer(struct ScriptNode *node, lua_Integer interval)
 			memset(&ts, 0, sizeof(ts));
 			ts.it_value.tv_sec = interval / 1000;
 			ts.it_value.tv_nsec = (interval % 1000) * 1000000;
-			timer_settime(node->timerid, 0, &ts, NULL);
+			int err = timer_settime(node->timerid, 0, &ts, NULL);
+			if (err < 0)
+			{
+				fprintf(stderr, "timer NOT set\n");
+			}
 		}
 	}
 }
