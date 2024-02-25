@@ -80,7 +80,7 @@ static int luaenv_emit(lua_State *lua)
 	lua_settop(lua, 1);
 	luaL_checktype(lua, 1, LUA_TTABLE);
 
-	lua_getfield(lua, 1, "mtu");
+	lua_getfield(lua, 1, "type");
 	lua_getfield(lua, 1, "id");
 	lua_getfield(lua, 1, "len");
 	lua_getfield(lua, 1, "dlc");	// CAN only, do not use unless you know what you are doing
@@ -90,9 +90,20 @@ static int luaenv_emit(lua_State *lua)
 	lua_getfield(lua, 1, "brs");	// CAN FD only
 	lua_getfield(lua, 1, "esi");	// CAN FD only
 
-	int mtu = luaL_optinteger(lua, -9, CAN_MTU);
+	const char *msg_type = luaL_optstring(lua, -9, "CAN");
+	int mtu = CAN_MTU;
+	if (!strcasecmp(msg_type, "CANFD"))
+		mtu = CANFD_MTU;
+
 	frame.can_id = luaL_checkinteger(lua, -8);
+
 	frame.len = luaL_checkinteger(lua, -7);
+	if (frame.len > 8)
+	{
+		// promote to CAN FD
+		mtu = CANFD_MTU;
+	}
+
 	if (CAN_MTU == mtu)
 		fptr->len8_dlc = luaL_optinteger(lua, -6, frame.len);
 	bool eff_flag = lua_toboolean(lua, -5);
@@ -101,8 +112,8 @@ static int luaenv_emit(lua_State *lua)
 	bool brs_flag = lua_toboolean(lua, -2);
 	bool esi_flag = lua_toboolean(lua, -1);
 
-	// free the stack
-	lua_pop(lua, 9);
+	// free the stack, excluding string arguments
+	lua_pop(lua, 8);
 
 	// if id is in the extended range, set eff_flag automatically
 	if (frame.can_id & ~CAN_SFF_MASK)

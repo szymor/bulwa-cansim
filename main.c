@@ -389,21 +389,26 @@ static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, in
 		}
 
 		lua_newtable(node->lua);
-		// mtu - (16 - CAN, 72 - CAN FD)
-		lua_pushstring(node->lua, "mtu");
-		lua_pushinteger(node->lua, mtu);
+		// message type
+		lua_pushstring(node->lua, "type");
+		if (CAN_MTU == mtu)
+			lua_pushstring(node->lua, "CAN");
+		else if (CANFD_MTU == mtu)
+			lua_pushstring(node->lua, "CANFD");
+		else
+			lua_pushstring(node->lua, "unknown");
 		lua_settable(node->lua, -3);
 		// timestamp in nanoseconds
 		lua_pushstring(node->lua, "timestamp");
 		lua_pushinteger(node->lua, timestamp);
 		lua_settable(node->lua, -3);
 		// frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
-		unsigned int eff = frame->can_id & CAN_EFF_FLAG;
+		bool eff = frame->can_id & CAN_EFF_FLAG;
 		lua_pushstring(node->lua, "eff");
 		lua_pushboolean(node->lua, eff);
 		lua_settable(node->lua, -3);
 		// can id
-		unsigned int id = frame->can_id & (eff ? CAN_EFF_MASK : CAN_SFF_MASK);
+		canid_t id = frame->can_id & (eff ? CAN_EFF_MASK : CAN_SFF_MASK);
 		lua_pushstring(node->lua, "id");
 		lua_pushinteger(node->lua, id);
 		lua_settable(node->lua, -3);

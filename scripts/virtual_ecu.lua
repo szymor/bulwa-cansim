@@ -9,8 +9,7 @@ end
 
 function on_timer(interval)
 	msg = {}
-	msg.mtu = 72
-	msg.id = 0x7ff
+	msg.id = 0x7df
 	msg.len = 8
 	for i=0,msg.len-1 do
 		msg[i] = math.random(0, 255)

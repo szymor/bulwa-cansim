@@ -12,7 +12,7 @@ end
 function on_message(msg)
 	diff = msg.timestamp / 1000000000 - start_time
 
-	proto_string = (msg.mtu == 16) and "  CAN" or "CANFD"
+	proto_string = (msg.type == "CAN") and "  CAN" or "CANFD"
 	extended_id = string.format("%08x%s", msg.id, msg.eff and "x" or " ")
 	rtr_str = msg.rtr and "rtr" or "   "
 	err_str = msg.err and "err" or "   "
