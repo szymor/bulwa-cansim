@@ -3,7 +3,7 @@
 -- scan settings
 diag_req  = 0x18DA0BFA
 diag_resp = 0x18DAFA0B
-timeout = 20
+timeout = 2000
 
 session_id = 0x01
 
@@ -41,6 +41,15 @@ function tester_present()
 	set_timer(timeout)
 end
 
+function scan_next_session_or_die()
+	if session_id < 0xff then
+		session_id = session_id + 1
+		switch_session(session_id)
+	else
+		disable_node()
+	end
+end
+
 function on_enable()
 	print("Session scan started")
 	switch_session(session_id)
@@ -52,25 +61,15 @@ function on_disable()
 end
 
 function on_timer(ms)
-	io.write(string.format("sid %02x - no response\n", session_id))
-	if session_id < 0xff then
-		session_id = session_id + 1
-		switch_session(session_id)
-	else
-		disable_node()
-	end
+	io.write(string.format("sid 0x%02x - no response\n", session_id))
+	scan_next_session_or_die()
 end
 
 function on_message(msg)
 	if msg.id == diag_resp then
 		if msg[1] == 0x50 then
-			io.write(string.format("sid %02x present - positive response\n", session_id))
-			if session_id < 0xff then
-				session_id = session_id + 1
-				switch_session(session_id)
-			else
-				disable_node()
-			end
+			io.write(string.format("sid 0x%02x present - positive response\n", session_id))
+			scan_next_session_or_die()
 		elseif msg[1] == 0x7f and msg[2] == 0x10 then
 			if msg[3] == 0x78 then -- requestCorrectlyReceived-ResponsePending
 				tester_present();
@@ -80,20 +79,13 @@ function on_message(msg)
 			-- 0x33 - securityAccessDenied
 			-- 0x34 - authenticationRequired
 			if msg[3] == 0x7e or msg[3] == 0x33 or msg[3] == 0x34 then
-				io.write(string.format("sid %02x present - NRC %02x\n", session_id, msg[3]))
-				if session_id < 0xff then
-					session_id = session_id + 1
-					switch_session(session_id)
-				else
-					disable_node()
-				end
+				io.write(string.format("sid 0x%02x present - NRC 0x%02x\n", session_id, msg[3]))
+				scan_next_session_or_die()
 			elseif msg[3] ~= 0x78 then
-				if session_id < 0xff then
-					session_id = session_id + 1
-					switch_session(session_id)
-				else
-					disable_node()
+				if msg[3] ~= 0x31 then	-- requestOutOfRange
+					io.write(string.format("sid 0x%02x ??????? - NRC 0x%02x\n", session_id, msg[3]))
 				end
+				scan_next_session_or_die()
 			end
 		end
 	end

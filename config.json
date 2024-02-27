@@ -14,6 +14,11 @@
 			"enabled": false
 		},
 		{
+			"name": "service scanner",
+			"path": "scripts/service_scan.lua",
+			"enabled": false
+		},
+		{
 			"name": "virtual ecu",
 			"path": "scripts/virtual_ecu.lua",
 			"enabled": false
