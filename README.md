@@ -16,6 +16,8 @@ The work is in progress.
 
 `disable_node(node_name_string)` - disables the node named *node_name_string*,
 
+`disable_node()` - disable a node running the script,
+
 `set_timer(interval)` - arms the timer of a node with a given time *interval*; if *interval* == 0, then the timer is disarmed,
 
 `emit(msg)` - sends a message over CAN or CAN FD, the *msg* table describes the message to be sent:
@@ -36,7 +38,7 @@ The work is in progress.
 
 `on_message(msg)` - *msg* contains details of the received message, the format is the same as for *emit(msg)*,
 
-`on_timer(interval)` - returns non-zero value for a periodic timer.
+`on_timer(interval)` - returns non-zero value for a periodic timer, returns zero to stop a timer, returns nil (i.e. nothing) if a timer was previously set in the callback by *set_timer*.
 
 ## credits
 Code by *szymor* aka *vamastah*.
