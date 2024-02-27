@@ -467,15 +467,30 @@ static int node_ontimer(struct ScriptNode *node)
 	if (LUA_TFUNCTION == rettype)
 	{
 		lua_pushinteger(node->lua, node->timer_interval);
+		node->timer_interval = -1;	// temporary marker
 		err = lua_pcall(node->lua, 1, 1, 0);
 		if (err)
 		{
 			fprintf(stderr, "%s\n", lua_tostring(node->lua, -1));
 			return RC_CALL;
 		}
-		// Number supports fractions of milliseconds
-		lua_Integer interval = (lua_Integer)lua_tonumber(node->lua, -1);
-		node_set_timer(node, interval);
+		if (!lua_isnil(node->lua, -1))
+		{
+			// if we return anything, set it as interval
+			// Number supports fractions of milliseconds
+			lua_Integer interval = (lua_Integer)lua_tonumber(node->lua, -1);
+			node_set_timer(node, interval);
+		}
+		else
+		{
+			if (node->timer_interval < 0)
+			{
+				// interval was not changed via set_timer in on_timer callback
+				// so we can remove the timer
+				node_set_timer(node, 0);
+			}
+		}
+		// pop a function argument
 		lua_pop(node->lua, 1);
 	}
 	else

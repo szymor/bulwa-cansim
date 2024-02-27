@@ -44,7 +44,12 @@ static int luaenv_enablenode(lua_State *lua)
 
 static int luaenv_disablenode(lua_State *lua)
 {
+	if (lua_gettop(lua) == 0)
+	{
+		lua_getglobal(lua, "node_name");
+	}
 	const char *node_name = luaL_checkstring(lua, 1);
+
 	for (int i = 0; i < nodes_num; ++i)
 	{
 		if (!strcmp(nodes[i].name, node_name))

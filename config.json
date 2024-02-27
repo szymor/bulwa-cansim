@@ -9,9 +9,14 @@
 			"enabled": true
 		},
 		{
+			"name": "session scanner",
+			"path": "scripts/session_scan.lua",
+			"enabled": false
+		},
+		{
 			"name": "virtual ecu",
 			"path": "scripts/virtual_ecu.lua",
-			"enabled": true
+			"enabled": false
 		}
 	]
 }

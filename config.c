@@ -68,7 +68,8 @@ int config_load_node(int idx, struct ScriptNode *node)
 	err = luaL_loadfile(node->lua, script_path);
 	if (err)
 	{
-		fprintf(stderr, "%s: loadfile error\n", node->name);
+		const char *err_string = luaL_checkstring(node->lua, -1);
+		fprintf(stderr, "%s: %s\n", node->name, err_string);
 		return RC_LOADFILE;
 	}
 	err = lua_pcall(node->lua, 0, 0, 0);
