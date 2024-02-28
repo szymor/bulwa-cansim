@@ -19,6 +19,11 @@
 			"enabled": false
 		},
 		{
+			"name": "security level scanner",
+			"path": "scripts/security_level_scan.lua",
+			"enabled": false
+		},
+		{
 			"name": "virtual ecu",
 			"path": "scripts/virtual_ecu.lua",
 			"enabled": false

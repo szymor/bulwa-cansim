@@ -82,7 +82,7 @@ function on_message(msg)
 				io.write(string.format("sid 0x%02x present - NRC 0x%02x\n", session_id, msg[3]))
 				scan_next_session_or_die()
 			elseif msg[3] ~= 0x78 then
-				if msg[3] ~= 0x31 then	-- requestOutOfRange
+				if msg[3] ~= 0x12 then	-- SubFunctionNotSupported
 					io.write(string.format("sid 0x%02x ??????? - NRC 0x%02x\n", session_id, msg[3]))
 				end
 				scan_next_session_or_die()

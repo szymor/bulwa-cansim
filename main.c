@@ -51,7 +51,10 @@ int main(int argc, char *argv[])
 
 	s = socket(PF_CAN, SOCK_RAW, CAN_RAW);
 	if (s < 0)
+	{
+		fprintf(stderr, "unable to create a socket\n");
 		return RC_SOCKET;
+	}
 	const char *canif_name = config_get_canif_name();
 	printf("interface %s found in config\n\n", canif_name);
 	strcpy(ifr.ifr_name, canif_name);
@@ -68,13 +71,13 @@ int main(int argc, char *argv[])
 	}
 
 	int recv_own_msgs = 1;
-	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &recv_own_msgs, sizeof(recv_own_msgs)))
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_RECV_OWN_MSGS, &recv_own_msgs, sizeof(recv_own_msgs)) < 0)
 	{
 		fprintf(stderr, "warning: CAN_RAW_RECV_OWN_MSGS not supported\n");
 	}
 
 	can_err_mask_t err_mask = CAN_ERR_MASK;		// register for all error events
-	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask)))
+	if (setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask)) < 0)
 	{
 		fprintf(stderr, "warning: CAN_ERR_* not supported\n");
 	}
@@ -186,8 +189,8 @@ int main(int argc, char *argv[])
 							 * See chapter 2.1.2 Receive timestamps in
 							 * linux/Documentation/networking/timestamping.txt
 							 */
-							if (stamp[2].tv_nsec || stamp[2].tv_sec)
-								stamp += 2;		// read timestamp from stamp[2]
+							//if (stamp[2].tv_nsec || stamp[2].tv_sec)
+							//	stamp += 2;		// read timestamp from stamp[2]
 							timestamp = stamp->tv_nsec + stamp->tv_sec * 1000000000;
 						}
 					}
@@ -227,6 +230,22 @@ int main(int argc, char *argv[])
 					node_ontimer(&nodes[i]);
 				}
 			}
+		}
+
+		// check if any of nodes is enabled
+		bool all_dead = true;
+		for (int i = 0; i < nodenum; ++i)
+		{
+			if (nodes[i].enabled)
+			{
+				all_dead = false;
+				break;
+			}
+		}
+		if (all_dead)
+		{
+			printf("All nodes are disabled. Graceful exit.\n");
+			break;
 		}
 	}
 

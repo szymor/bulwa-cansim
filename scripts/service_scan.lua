@@ -61,6 +61,11 @@ end
 function scan_next_service_or_die()
 	if service_id < 0xff then
 		service_id = service_id + 1
+		if service_id == 0x3f then
+		-- do not check 0x3f as the positive response (0x3f + 0x40)
+		-- is the same as the negative response
+			service_id = 0x40
+		end
 		check_service(service_id)
 	else
 		disable_node()
