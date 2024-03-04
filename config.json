@@ -24,6 +24,16 @@
 			"enabled": false
 		},
 		{
+			"name": "write data by identifier scanner",
+			"path": "scripts/write_did_scan.lua",
+			"enabled": false
+		},
+		{
+			"name": "read data by identifier scanner",
+			"path": "scripts/read_did_scan.lua",
+			"enabled": false
+		},
+		{
 			"name": "virtual ecu",
 			"path": "scripts/virtual_ecu.lua",
 			"enabled": false
