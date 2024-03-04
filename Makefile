@@ -1,8 +1,8 @@
 .PHONY: all clean
 
 PROJECT=bulwa
-SRC=main.c config.c luaenv.c
-INC=global.h
+SRC=$(addprefix src/,main.c config.c luaenv.c)
+INC=$(addprefix src/,global.h)
 
 all: $(PROJECT)
 
