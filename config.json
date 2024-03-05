@@ -34,6 +34,11 @@
 			"enabled": false
 		},
 		{
+			"name": "routine control scanner",
+			"path": "scripts/routine_control_scan.lua",
+			"enabled": false
+		},
+		{
 			"name": "virtual ecu",
 			"path": "scripts/virtual_ecu.lua",
 			"enabled": false
