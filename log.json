@@ -1,0 +1,12 @@
+{
+	"canif": {
+		"name": "vcan0"
+	},
+	"nodes": [
+		{
+			"name": "logger",
+			"path": "scripts/logger.lua",
+			"enabled": true
+		}
+	]
+}

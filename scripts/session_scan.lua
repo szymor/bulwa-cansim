@@ -57,7 +57,6 @@ end
 
 function on_disable()
 	print("Session scan stopped")
-	set_timer(0)	-- optional call
 end
 
 function on_timer(ms)
@@ -75,10 +74,10 @@ function on_message(msg)
 				tester_present();
 			end
 
-			-- 0x7e - SubFunctionNotSupportedInActiveSession
 			-- 0x33 - securityAccessDenied
 			-- 0x34 - authenticationRequired
-			if msg[3] == 0x7e or msg[3] == 0x33 or msg[3] == 0x34 then
+			-- 0x7e - SubFunctionNotSupportedInActiveSession
+			if msg[3] == 0x33 or msg[3] == 0x34 or msg[3] == 0x7e then
 				io.write(string.format("sid 0x%02x present - NRC 0x%02x\n", session_id, msg[3]))
 				scan_next_session_or_die()
 			elseif msg[3] ~= 0x78 then
