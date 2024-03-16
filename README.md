@@ -43,6 +43,12 @@ The work is in progress.
 ## credits
 Code by *szymor* aka *vamastah*.
 
+## to do
+
+- msg data should start from index 1, not 0 - this is lua convention
+- msg data len should be considered at transmit if no explicit len is provided
+- add iso-tp frame support
+
 ## development cheatsheet
 
 ### enable virtual CAN module and configure VCAN device
@@ -69,6 +75,11 @@ while [ true ]; do cansend vcan0 1FFFFFFF#`head -c 8 /dev/urandom | xxd -p`; sle
 
 # CAN FD
 while [ true ]; do cansend vcan0 1FFFFFFF##0`head -c 16 /dev/urandom | xxd -p`; sleep 1; done
+```
+
+### send ISO-TP frames
+```
+echo "2E F1 90 30 31 32 33 34 35 36 37 38 39" | isotpsend -s 18DA0BFA -d 18DAFA0B vcan0
 ```
 
 ### dump messages from CAN bus
