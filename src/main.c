@@ -57,7 +57,10 @@ int main(int argc, char *argv[])
 		"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
 
 	// parse JSON configuration file
-	if (RC_OK != config_load("config.json"))
+	const char *config_path = "config.json";
+	if (argc > 1)
+		config_path = argv[1];
+	if (RC_OK != config_load(config_path))
 	{
 		fprintf(stderr, "no valid json configuration found\n");
 		return RC_CONFIGFILE;
@@ -74,7 +77,7 @@ int main(int argc, char *argv[])
 		return RC_SOCKET;
 	}
 	const char *canif_name = config_get_canif_name();
-	printf("interface %s found in config\n\n", canif_name);
+	printf("interface %s found in %s\n\n", canif_name, config_path);
 	strcpy(ifr.ifr_name, canif_name);
 	ioctl(s, SIOCGIFINDEX, &ifr);
 
@@ -323,6 +326,7 @@ void node_disable(struct ScriptNode *node)
 {
 	node->enabled = false;
 	node_ondisable(node);
+	node_set_timer(node, 0);
 }
 
 void node_set_timer(struct ScriptNode *node, lua_Integer interval)
