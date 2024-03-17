@@ -145,7 +145,7 @@ function on_message(msg)
 			deferred_call(scan_next_level_or_die)
 		elseif msg[0] & 0xf0 == 0x00 then
 			-- if any single frame response comes, scan the next security level
-			deferred_call(scan_next_level_or_die)
+			scan_next_level_or_die()
 		end
 	end
 end

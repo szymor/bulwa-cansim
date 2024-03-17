@@ -91,10 +91,11 @@ function on_message(msg)
 			io.write(string.format("Switched to 0x%02x session\n", session_id))
 			did = 0x0000
 			write_did(did)
-		elseif msg[1] == 0x6e or (msg[1] == 0x7f and msg[2] == 0x2e and msg[3] ~= 0x12 and msg[3] ~= 0x31 and msg[3] ~= 0x11 and msg[3] ~= 0x7f and msg[3] ~= 0x78) then
+		elseif msg[1] == 0x6e or (msg[1] == 0x7f and msg[2] == 0x2e and msg[3] ~= 0x11 and msg[3] ~= 0x12 and msg[3] ~= 0x31 and msg[3] ~= 0x7e and msg[3] ~= 0x7f and msg[3] ~= 0x78) then
+		-- 0x11 - serviceNotSupported
 		-- 0x12 - SubFunctionNotSupported
 		-- 0x31 - requestOutOfRange
-		-- 0x11 - serviceNotSupported
+		-- 0x7e - SubFunctionNotSupportedInActiveSession
 		-- 0x7f - serviceNotSupportedInActiveSession
 		-- 0x78 - requestCorrectlyReceived-ResponsePending
 			if msg[1] == 0x6e then
