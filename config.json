@@ -4,13 +4,13 @@
 	},
 	"nodes": [
 		{
-			"name": "logger",
-			"path": "scripts/logger.lua",
-			"enabled": true
-		},
-		{
 			"name": "session scanner",
 			"path": "scripts/session_scan.lua",
+			"enabled": false
+		},
+		{
+			"name": "session scanner 2",
+			"path": "scripts/session_scan_coroutine.lua",
 			"enabled": false
 		},
 		{
