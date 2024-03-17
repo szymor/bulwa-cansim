@@ -1,0 +1,12 @@
+{
+	"canif": {
+		"name": "vcan0"
+	},
+	"nodes": [
+		{
+			"name": "virtual ecu",
+			"path": "scripts/virtual_ecu.lua",
+			"enabled": true
+		}
+	]
+}

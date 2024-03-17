@@ -21,6 +21,9 @@ uds_resp = 0x18DAFA0B
 supported_sessions = { 0x01, 0x02 }
 current_session = 0x01
 
+rc1234_start = 0
+rc1234_stop  = 0
+
 vin = "MY-H4CK15H-3CU-F0R3V3R-1N-MY-H34RT-BULWA-CANSIM-0123456789"
 
 -- ISO-TP frame, basically means that the transmission should be continued
@@ -256,16 +259,41 @@ function on_uds_msg(payload)
 		else
 			local did = (payload[2] << 8) | payload[3]
 			if did == 0xf190 then
-				vin = string.char(table.unpack(payload))
-				vin = vin:sub(4)
-				raw_send(uds_resp, {0x03, 0x6e, 0xf1, 0x90})
+				if current_session == 0x02 then
+					vin = string.char(table.unpack(payload))
+					vin = vin:sub(4)
+					raw_send(uds_resp, {0x03, 0x6e, 0xf1, 0x90})
+				else
+					raw_send(uds_resp, {0x03, 0x7f, 0x2e, 0x7e})
+				end
 			else
 				raw_send(uds_resp, {0x03, 0x7f, 0x2e, 0x31})
 			end
 		end
 	elseif service == 0x31 then
 		-- Routine Control
-		raw_send(uds_resp, {0x03, 0x7f, 0x31, 0x12})
+		if #payload < 4 then
+			raw_send(uds_resp, {0x03, 0x7f, 0x31, 0x13})
+		else
+			local subf = payload[2]
+			local rid = (payload[3] << 8) | payload[4]
+			if rid == 0x1234 then
+				if subf == 0x01 then
+					-- startRoutine
+					rc1234_start = os.time()
+					rc1234_stop = os.time()
+				elseif subf == 0x02 then
+					-- stopRoutine
+					rc1234_stop = os.time()
+				elseif subf == 0x03 then
+					-- requestRoutineResults
+					print(string.format("%s: timediff %7.3f", node_name, rc1234_stop - rc1234_start))
+				end
+				raw_send(uds_resp, {0x03, 0x71, subf, 0x12, 0x34})
+			else
+				raw_send(uds_resp, {0x03, 0x7f, 0x31, 0x31})
+			end
+		end
 	elseif service == 0x3e then
 		-- Tester Present
 		if #payload == 1 then
