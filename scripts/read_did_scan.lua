@@ -12,35 +12,17 @@ deferred_time = 2000
 deferred_callback = nil
 
 function switch_session(sid)
-	local msg = {}
+	local msg = { 0x02, 0x10, sid, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x10
-	msg[2] = sid
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function tester_present()
-	local msg = {}
+	local msg = { 0x02, 0x3e, 0x00, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x3e
-	msg[2] = 0x00
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
@@ -49,34 +31,17 @@ end
 -- and no more flow control frames need to be sent for the message.
 -- It is defined in ISO 15765-2.
 function flow_control()
-	local msg = {}
+	local msg = { 0x30, 0, 0, 0, 0, 0, 0, 0 }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x30
-	for i = 1, msg.len-1 do
-		msg[i] = 0x00
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function read_did(did)
-	local msg = {}
+	local msg = { 0x03, 0x22, did >> 8, did & 0xff, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x03
-	msg[1] = 0x22
-	msg[2] = did >> 8
-	msg[3] = did & 0xff
-	for i = 4, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
@@ -102,7 +67,6 @@ end
 
 function on_disable()
 	print("Read DID scan stopped")
-	set_timer(0)	-- optional call
 end
 
 function on_timer(ms)
@@ -117,32 +81,32 @@ end
 
 function on_message(msg)
 	if msg.id == diag_resp then
-		if msg[0] & 0xf0 == 0x00 then
-			if msg[1] == 0x50 then
+		if msg[1] & 0xf0 == 0x00 then
+			if msg[2] == 0x50 then
 				io.write(string.format("Switched to 0x%02x session\n", session_id))
 				did = 0x0000
 				read_did(did)
-			elseif msg[1] == 0x62 or (msg[1] == 0x7f and msg[2] == 0x22 and msg[3] ~= 0x12 and msg[3] ~= 0x31 and msg[3] ~= 0x11 and msg[3] ~= 0x7e and msg[3] ~= 0x7f and msg[3] ~= 0x78) then
+			elseif msg[2] == 0x62 or (msg[2] == 0x7f and msg[3] == 0x22 and msg[4] ~= 0x12 and msg[4] ~= 0x31 and msg[4] ~= 0x11 and msg[4] ~= 0x7e and msg[4] ~= 0x7f and msg[4] ~= 0x78) then
 			-- 0x12 - SubFunctionNotSupported
 			-- 0x31 - requestOutOfRange
 			-- 0x11 - serviceNotSupported
 			-- 0x7f - serviceNotSupportedInActiveSession
 			-- 0x7e - SubFunctionNotSupportedInActiveSession
 			-- 0x78 - requestCorrectlyReceived-ResponsePending
-				if msg[1] == 0x62 then
+				if msg[2] == 0x62 then
 					io.write(string.format("RDBI 0x%04x present - positive response\n", did))
 				else
-					io.write(string.format("RDBI 0x%04x present - NRC 0x%02x\n", did, msg[3]))
+					io.write(string.format("RDBI 0x%04x present - NRC 0x%02x\n", did, msg[4]))
 				end
 				scan_next_did_or_die()
-			elseif msg[1] == 0x7f and msg[2] == 0x22 and msg[3] == 0x78 then
+			elseif msg[2] == 0x7f and msg[3] == 0x22 and msg[4] == 0x78 then
 				tester_present()
 			else
 				scan_next_did_or_die()
 			end
-		elseif msg[0] & 0xf0 == 0x10 then
-		-- check for ISO-TP First Frame, UDS payload starts from offset 2
-			if msg[2] == 0x62 then
+		elseif msg[1] & 0xf0 == 0x10 then
+		-- check for ISO-TP First Frame, UDS payload starts from byte 3
+			if msg[3] == 0x62 then
 				io.write(string.format("RDBI 0x%04x present - positive response\n", did))
 				flow_control()
 				deferred_call(scan_next_did_or_die)

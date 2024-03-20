@@ -6,35 +6,17 @@ diag_resp = 0x18DAFA0B
 timeout = 1500
 
 function switch_session(sid)
-	msg = {}
+	local msg = { 0x02, 0x10, sid, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x10
-	msg[2] = sid
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function tester_present()
-	msg = {}
+	local msg = { 0x02, 0x3e, 0x80, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x3e
-	msg[2] = 0x80
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
@@ -50,17 +32,17 @@ function wait_for_switch_response()
 				-- timeout
 				return -2
 			end
-		elseif resp[1] == 0x7f and resp[2] == 0x10 then
-			if resp[3] == 0x78 then
+		elseif resp[2] == 0x7f and resp[3] == 0x10 then
+			if resp[4] == 0x78 then
 				-- 0x78 - requestCorrectlyReceived-ResponsePending
 				tester_present()
 				pending = true
 			else
 				pending = false
 				-- could not have switched
-				return resp[3]
+				return resp[4]
 			end
-		elseif resp[1] == 0x50 then
+		elseif resp[2] == 0x50 then
 			pending = false
 			-- switched successfully
 			return -1

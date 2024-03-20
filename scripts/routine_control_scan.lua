@@ -32,38 +32,17 @@ function scan_next_rid_or_die()
 end
 
 function switch_session(sid)
-	local msg = {}
+	local msg = { 0x02, 0x10, sid, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x10
-	msg[2] = sid
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function routine_control(rid, subfunction)
-	local msg = {}
+	local msg = { 0x05, 0x31, subfunction, rid >> 8, rid & 0xff, 0x00, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x05
-	msg[1] = 0x31
-	msg[2] = subfunction
-	msg[3] = rid >> 8
-	msg[4] = rid & 0xff
-	msg[5] = 0x00  -- rc option record
-	for i = 6, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
@@ -75,7 +54,6 @@ end
 
 function on_disable()
 	print("Routine control scan stopped")
-	set_timer(0)	-- optional call
 end
 
 function on_timer(ms)
@@ -89,21 +67,21 @@ end
 
 function on_message(msg)
 	if msg.id == diag_resp then
-		if msg[1] == 0x50 then
-			io.write(string.format("Switched to 0x%02x session\n", msg[2]))
+		if msg[2] == 0x50 then
+			io.write(string.format("Switched to 0x%02x session\n", msg[3]))
 			scan_next_rid_or_die()
-		elseif msg[1] == 0x71 or (msg[1] == 0x7f and msg[2] == 0x31 and msg[3] ~= 0x31 and msg[3] ~= 0x12 and msg[3] ~= 0x22 and msg[3] ~= 0x7f) then
+		elseif msg[2] == 0x71 or (msg[2] == 0x7f and msg[3] == 0x31 and msg[4] ~= 0x31 and msg[4] ~= 0x12 and msg[4] ~= 0x22 and msg[4] ~= 0x7f) then
 		-- 0x12 - SubFunctionNotSupported
 		-- 0x31 - requestOutOfRange
 		-- 0x22 - conditionsNotCorrect
 		-- 0x7f - serviceNotSupportedInActiveSession
-			if msg[1] == 0x71 then
+			if msg[2] == 0x71 then
 				io.write(string.format("RID 0x%04x (sf: 0x%02x) present - positive response\n", rid, subfunction))
 			else
-				io.write(string.format("RID 0x%04x (sf: 0x%02x) present - NRC 0x%02x\n", rid, subfunction, msg[3]))
+				io.write(string.format("RID 0x%04x (sf: 0x%02x) present - NRC 0x%02x\n", rid, subfunction, msg[4]))
 			end
 		end
-		if msg[1] ~= 0x50 then
+		if msg[2] ~= 0x50 then
 			scan_next_rid_or_die()
 		end
 	end

@@ -474,14 +474,10 @@ static int node_onmessage(struct ScriptNode *node, struct canfd_frame *frame, in
 		lua_pushstring(node->lua, "esi");
 		lua_pushboolean(node->lua, canfd_flags & CANFD_ESI);
 		lua_settable(node->lua, -3);
-		// frame length
-		lua_pushstring(node->lua, "len");
-		lua_pushinteger(node->lua, frame->len);
-		lua_settable(node->lua, -3);
 		// payload
 		for (int i = 0; i < frame->len; ++i)
 		{
-			lua_pushinteger(node->lua, i);
+			lua_pushinteger(node->lua, i + 1);
 			lua_pushinteger(node->lua, frame->data[i]);
 			lua_settable(node->lua, -3);
 		}

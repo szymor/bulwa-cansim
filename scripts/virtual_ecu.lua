@@ -30,29 +30,15 @@ vin = "MY-H4CK15H-3CU-F0R3V3R-1N-MY-H34RT-BULWA-CANSIM-0123456789"
 -- and no more flow control frames need to be sent for the message.
 -- It is defined in ISO 15765-2.
 function flow_control(id)
-	local msg = {}
+	local msg = {0x30, 0, 0, 0, 0, 0, 0, 0}
 	msg.id = id
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x30
-	for i = 1, msg.len-1 do
-		msg[i] = 0x00
-	end
-
 	emit(msg)
 end
 
 function raw_send(id, data)
-	local msg = {}
-	msg.id = id
-	msg.len = #data
-
-	for i = 1, #data do
-		msg[i - 1] = data[i]
-	end
-
-	emit(msg)
+	data.id = id
+	emit(data)
 end
 
 -- ISO-TP frame transmit over CAN
@@ -84,11 +70,10 @@ function isotp_send_template(response_id)
 		else
 			-- continue transmission if needed
 			-- msg contains a possible FC frame
-			-- msg idx starts from 0! (to be fixed)
 			if fc_pending then
 				-- process flow control frame, todo
 				-- for now dump all data at once
-				if msg[0] == 0x30 then
+				if msg[1] == 0x30 then
 					fc_pending = false
 					local index = 1
 					while #payload > 0 do
@@ -111,25 +96,25 @@ function isotp_recv_template(response_id, callback)
 	local payload = {}
 	while true do
 		local msg = coroutine.yield()
-		if msg[0] & 0xf0 == 0 then
+		if msg[1] & 0xf0 == 0 then
 			-- Single Frame
 			payload = {}
-			payload.len = msg[0] & 0x0f
+			payload.len = msg[1] & 0x0f
 			for i = 1, payload.len do
-				payload[i] = msg[i]
+				payload[i] = msg[i + 1]
 			end
 			callback(payload)
 			payload = {}
-		elseif msg[0] & 0xf0 == 0x10 then
+		elseif msg[1] & 0xf0 == 0x10 then
 			-- First Frame
 			payload = {}
-			payload.len = ((msg[0] & 0x0f) << 8) | msg[1]
+			payload.len = ((msg[1] & 0x0f) << 8) | msg[2]
 			local len = payload.len > 6 and 6 or payload.len
 			for i = 1, len do
-				payload[i] = msg[i + 1]
+				payload[i] = msg[i + 2]
 			end
 			flow_control(response_id)
-		elseif msg[0] & 0xf0 == 0x20 then
+		elseif msg[1] & 0xf0 == 0x20 then
 			-- Consecutive Frame
 			local start_idx = #payload
 			local len = payload.len - start_idx
@@ -137,7 +122,7 @@ function isotp_recv_template(response_id, callback)
 				len = 7
 			end
 			for i = 1, len do
-				payload[start_idx + i] = msg[i]
+				payload[start_idx + i] = msg[i + 1]
 			end
 			if #payload == payload.len then
 				callback(payload)

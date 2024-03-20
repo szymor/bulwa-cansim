@@ -19,7 +19,7 @@ function on_message(msg)
 	brs_str = msg.brs and "brs" or "   "
 	esi_str = msg.esi and "esi" or "   "
 
-	io.write(string.format("%11.6f %s %s %s %s %s %s %2d: ", diff, proto_string, extended_id, brs_str, esi_str, rtr_str, err_str, msg.len))
-	for i=0,msg.len-1 do io.write(string.format("%02x ", msg[i])) end
+	io.write(string.format("%11.6f %s %s %s %s %s %s %2d: ", diff, proto_string, extended_id, brs_str, esi_str, rtr_str, err_str, #msg))
+	for i=1,#msg do io.write(string.format("%02x ", msg[i])) end
 	print()
 end

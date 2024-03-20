@@ -45,12 +45,12 @@ Code by *szymor* aka *vamastah*.
 
 ## to do
 
-- msg data should start from index 1, not 0 - this is lua convention
-- msg data len should be considered at transmit if no explicit len is provided
 - add iso-tp frame support as lua library
 - add obd support to virtual ecu
 - add fuzzers (canbus, iso-tp, uds), obd scanners, canbus monitor (to search for diagnostic ids or other information)
 - add inter-node communication means, maybe ping and on_pong API?
+- add xml parser (lxp?), could be useful for parsing odx and cdd
+- encapsulate bulwa functionality in blw object
 
 ## development cheatsheet
 

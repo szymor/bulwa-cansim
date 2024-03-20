@@ -9,51 +9,25 @@ session_id = 0x01
 service_id = 0x00
 
 function switch_session(sid)
-	msg = {}
+	local msg = { 0x02, 0x10, sid, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x10
-	msg[2] = sid
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function tester_present()
-	msg = {}
+	local msg = { 0x02, 0x3e, 0x00, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x02
-	msg[1] = 0x3e
-	msg[2] = 0x00
-	for i = 3, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
 
 function check_service(sid)
-	msg = {}
+	local msg = { 0x01, sid, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc }
 	msg.id = diag_req
 	msg.eff = true
-	msg.len = 8
-
-	msg[0] = 0x01
-	msg[1] = sid
-	for i = 2, msg.len-1 do
-		msg[i] = 0xcc
-	end
-
 	emit(msg)
 	set_timer(timeout)
 end
@@ -79,7 +53,6 @@ end
 
 function on_disable()
 	io.write(string.format("Service scan for session 0x%02x stopped\n", session_id))
-	set_timer(0)	-- optional call
 end
 
 function on_timer(ms)
@@ -89,21 +62,21 @@ end
 
 function on_message(msg)
 	if msg.id == diag_resp then
-		if msg[1] == 0x50 then
+		if msg[2] == 0x50 then
 			io.write(string.format("Switched to 0x%02x session\n", session_id))
 			service_id = 0x00
 			check_service(service_id)
-		elseif msg[1] == (service_id + 0x40) or (msg[1] == 0x7f and msg[2] == service_id and msg[3] ~= 0x11 and msg[3] ~= 0x7f) then
+		elseif msg[2] == (service_id + 0x40) or (msg[2] == 0x7f and msg[3] == service_id and msg[4] ~= 0x11 and msg[4] ~= 0x7f) then
 		-- 0x11 - serviceNotSupported
 		-- 0x7f - serviceNotSupportedInActiveSession
 			io.write(string.format("Service 0x%02x present - ", service_id))
-			if msg[1] == (service_id + 0x40) then
+			if msg[2] == (service_id + 0x40) then
 				io.write(string.format("positive response\n"))
 			else
-				io.write(string.format("NRC 0x%02x\n", msg[3]))
+				io.write(string.format("NRC 0x%02x\n", msg[4]))
 			end
 			scan_next_service_or_die()
-		elseif msg[1] == 0x7f and msg[3] == 0x78 then
+		elseif msg[2] == 0x7f and msg[4] == 0x78 then
 		-- 0x78 - requestCorrectlyReceived-ResponsePending
 			tester_present()
 		else
