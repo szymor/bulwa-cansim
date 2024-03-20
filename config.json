@@ -4,6 +4,11 @@
 	},
 	"nodes": [
 		{
+			"name": "logger",
+			"path": "scripts/logger.lua",
+			"enabled": false
+		},
+		{
 			"name": "session scanner",
 			"path": "scripts/session_scan.lua",
 			"enabled": false
@@ -36,6 +41,11 @@
 		{
 			"name": "routine control scanner",
 			"path": "scripts/routine_control_scan.lua",
+			"enabled": false
+		},
+		{
+			"name": "dumb fuzzer",
+			"path": "scripts/random_fuzzer.lua",
 			"enabled": false
 		},
 		{

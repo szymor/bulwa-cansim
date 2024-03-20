@@ -23,8 +23,7 @@ The work is in progress.
 `emit(msg)` - sends a message over CAN or CAN FD, the *msg* table describes the message to be sent:
 - `msg.type` - "CAN" or "CANFD",
 - `msg.id` - message identifier,
-- `msg.len` - the length of the message,
-- `msg.dlc` - CAN only, data length code to be sent; certain controllers allow the transmission or reception of a DLC greater than eight, but the actual data length is always limited to eight bytes,
+- `msg.dlc` - CAN only, data length code to be sent; certain controllers allow to send DLC different than the actual message length; if not provided, it is assumed from msg's length (#msg),
 - `msg.eff` - boolean, Extended Frame Format flag,
 - `msg.rtr` - boolean, Remote Transmission Request flag,
 - `msg.err` - boolean, Error Message Frame,
@@ -51,6 +50,9 @@ Code by *szymor* aka *vamastah*.
 - add inter-node communication means, maybe ping and on_pong API?
 - add xml parser (lxp?), could be useful for parsing odx and cdd
 - encapsulate bulwa functionality in blw object
+- improve timer resolution (interrupt poll when a signal comes)
+- add json configuration entries for socket options
+- add parameters of canbus (mode, bitrate, data bitrate) to json
 
 ## development cheatsheet
 
