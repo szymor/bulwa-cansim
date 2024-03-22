@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 		"warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n");
 
 	// parse JSON configuration file
-	const char *config_path = "config.json";
+	const char *config_path = "default.json";
 	if (argc > 1)
 		config_path = argv[1];
 	if (RC_OK != config_load(config_path))

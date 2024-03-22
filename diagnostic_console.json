@@ -1,0 +1,12 @@
+{
+	"canif": {
+		"name": "vcan0"
+	},
+	"nodes": [
+		{
+			"name": "diagnostic console",
+			"path": "scripts/diagnostic_console.lua",
+			"enabled": true
+		}
+	]
+}
