@@ -96,36 +96,42 @@ function isotp_recv_template(response_id, callback)
 	local payload = {}
 	while true do
 		local msg = coroutine.yield()
-		if msg[1] & 0xf0 == 0 then
-			-- Single Frame
-			payload = {}
-			payload.len = msg[1] & 0x0f
-			for i = 1, payload.len do
-				payload[i] = msg[i + 1]
-			end
-			callback(payload)
-			payload = {}
-		elseif msg[1] & 0xf0 == 0x10 then
-			-- First Frame
-			payload = {}
-			payload.len = ((msg[1] & 0x0f) << 8) | msg[2]
-			local len = payload.len > 6 and 6 or payload.len
-			for i = 1, len do
-				payload[i] = msg[i + 2]
-			end
-			flow_control(response_id)
-		elseif msg[1] & 0xf0 == 0x20 then
-			-- Consecutive Frame
-			local start_idx = #payload
-			local len = payload.len - start_idx
-			if len > 7 then
-				len = 7
-			end
-			for i = 1, len do
-				payload[start_idx + i] = msg[i + 1]
-			end
-			if #payload == payload.len then
+		if #msg > 0 then
+			if msg[1] & 0xf0 == 0 then
+				-- Single Frame
+				payload = {}
+				payload.len = msg[1] & 0x0f
+				for i = 1, payload.len do
+					payload[i] = msg[i + 1]
+				end
 				callback(payload)
+				payload = {}
+			elseif msg[1] & 0xf0 == 0x10 then
+				-- First Frame
+				payload = {}
+				payload.len = ((msg[1] & 0x0f) << 8) | msg[2]
+				local len = payload.len > 6 and 6 or payload.len
+				for i = 1, len do
+					payload[i] = msg[i + 2]
+				end
+				flow_control(response_id)
+			elseif msg[1] & 0xf0 == 0x20 then
+				-- Consecutive Frame
+				if payload.len ~= nil then
+					local start_idx = #payload
+					local len = payload.len - start_idx
+					if len > 7 then
+						len = 7
+					end
+					for i = 1, len do
+						payload[start_idx + i] = msg[i + 1]
+					end
+					if #payload == payload.len then
+						callback(payload)
+					end
+				else
+					payload = {}
+				end
 			end
 		end
 	end
@@ -223,7 +229,7 @@ function on_uds_msg(payload)
 		end
 	elseif service == 0x22 then
 		-- Read Data By Identifier
-		if #payload == 1 or #payload > 3 then
+		if #payload ~= 3 then
 			raw_send(uds_resp, {0x03, 0x7f, 0x22, 0x13})
 		else
 			local did = (payload[2] << 8) | payload[3]
